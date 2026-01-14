@@ -58,14 +58,21 @@ jobs:
         run: |
           echo "🔧 Running path fix script..."
           if [ -f dist/index.html ]; then
+            # Show original HTML first
+            echo "📄 Original HTML script tags:"
+            grep -oE '<script[^>]*src=["'"'"'][^"'"'"']+["'"'"'][^>]*>' dist/index.html || echo "No script tags found"
+            echo ""
+            
             # Run the Node.js script
-            node scripts/fix-paths.mjs
+            node scripts/fix-paths.mjs || {
+              echo "⚠️ Script failed, continuing with manual fix..."
+            }
             
             # ALWAYS apply manual fix as backup (even if script succeeds)
             echo ""
             echo "🔧 Applying additional manual fixes..."
             cd dist
-            # Fix all absolute paths
+            # Fix all absolute paths - be very aggressive
             sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Mapas/\2"|g' index.html
             sed -i.bak "s|\(src\|href\)='/\([^']*\)'|\1='/Mapas/\2'|g" index.html
             # Fix double Mapas
@@ -82,7 +89,10 @@ jobs:
             grep -oE '<link[^>]*href=["'"'"'][^"'"'"']+["'"'"'][^>]*>' index.html || echo "No link tags with href found"
             echo ""
             echo "Checking for problematic paths (should be empty):"
-            grep -oE '(src|href)=["'"'"']/[^M][^"'"'"']+["'"'"']' index.html | grep -v 'Mapas' | grep -v 'http' | head -5 || echo "✅ No problematic paths found!"
+            grep -oE '(src|href)=["'"'"']/[^M][^"'"'"']+["'"'"']' index.html | grep -v 'Mapas' | grep -v 'http' | grep -v 'https' | head -10 || echo "✅ No problematic paths found!"
+            echo ""
+            echo "📄 Full HTML content for verification:"
+            cat index.html
           else
             echo "❌ dist/index.html not found!"
             exit 1

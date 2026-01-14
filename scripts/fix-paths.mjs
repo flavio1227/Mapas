@@ -45,46 +45,65 @@ try {
   scriptRegex.lastIndex = 0;
   linkRegex.lastIndex = 0;
   
-  // AGGRESSIVE FIX: Fix ALL absolute paths that don't start with /Mapas/
-  // This handles: src="/assets/..." -> src="/Mapas/assets/..."
-  // And also: src="/src/..." -> src="/Mapas/src/..." (though this shouldn't happen in production)
+  // ULTRA AGGRESSIVE FIX: Fix ALL absolute paths that don't start with /Mapas/
+  console.log('🔧 Starting aggressive path fixing...');
   
-  // First, fix all double-quoted paths
+  // Count how many replacements we make
+  let replacementCount = 0;
+  
+  // Fix all double-quoted paths - MOST AGGRESSIVE
   html = html.replace(/(src|href)=["']\/([^"']+)["']/g, (match, attr, path) => {
-    // Skip if already has Mapas/ or if it's a full URL (http/https)
-    if (path.startsWith('Mapas/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
+    // Skip if already has Mapas/ or if it's a full URL (http/https/data)
+    if (path.startsWith('Mapas/') || 
+        path.startsWith('http://') || 
+        path.startsWith('https://') || 
+        path.startsWith('//') ||
+        path.startsWith('data:')) {
       return match;
     }
     const fixed = `${attr}="/Mapas/${path}"`;
-    console.log(`  Fixing: ${match} -> ${fixed}`);
+    console.log(`  ✓ Fixing: ${match} -> ${fixed}`);
+    replacementCount++;
     return fixed;
   });
   
   // Fix single-quoted paths
   html = html.replace(/(src|href)=[']\/([^']+)[']/g, (match, attr, path) => {
-    if (path.startsWith('Mapas/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
+    if (path.startsWith('Mapas/') || 
+        path.startsWith('http://') || 
+        path.startsWith('https://') || 
+        path.startsWith('//') ||
+        path.startsWith('data:')) {
       return match;
     }
     const fixed = `${attr}='/Mapas/${path}'`;
-    console.log(`  Fixing single-quoted: ${match} -> ${fixed}`);
+    console.log(`  ✓ Fixing single-quoted: ${match} -> ${fixed}`);
+    replacementCount++;
     return fixed;
   });
   
-  // Fix unquoted attributes (though rare)
+  // Fix unquoted attributes
   html = html.replace(/(src|href)=\/([^ >"']+)/g, (match, attr, path) => {
-    if (path.startsWith('Mapas/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
+    if (path.startsWith('Mapas/') || 
+        path.startsWith('http://') || 
+        path.startsWith('https://') || 
+        path.startsWith('//') ||
+        path.startsWith('data:')) {
       return match;
     }
     const fixed = `${attr}=/Mapas/${path}`;
-    console.log(`  Fixing unquoted: ${match} -> ${fixed}`);
+    console.log(`  ✓ Fixing unquoted: ${match} -> ${fixed}`);
+    replacementCount++;
     return fixed;
   });
   
   // Fix any double /Mapas/Mapas/
   html = html.replace(/\/Mapas\/Mapas\//g, '/Mapas/');
   
+  console.log(`\n✅ Made ${replacementCount} path replacements\n`);
+  
   // Final verification - check if there are still problematic paths
-  const problematicRegex = /(src|href)=["']\/(?!Mapas\/)(?!http)(?!\/\/)([^"']+)["']/g;
+  const problematicRegex = /(src|href)=["']\/(?!Mapas\/)(?!http)(?!\/\/)(?!data:)([^"']+)["']/g;
   const problematic = [];
   let probMatch;
   while ((probMatch = problematicRegex.exec(html)) !== null) {
@@ -94,11 +113,15 @@ try {
   if (problematic.length > 0) {
     console.log('⚠️ WARNING: Still found problematic paths:');
     problematic.forEach(p => console.log(`  - ${p}`));
-    // Force fix them
-    html = html.replace(/(src|href)=["']\/(?!Mapas\/)(?!http)(?!\/\/)([^"']+)["']/g, (match, attr, path) => {
-      return `${attr}="/Mapas/${path}"`;
+    // Force fix them one more time
+    html = html.replace(/(src|href)=["']\/(?!Mapas\/)(?!http)(?!\/\/)(?!data:)([^"']+)["']/g, (match, attr, path) => {
+      const fixed = `${attr}="/Mapas/${path}"`;
+      console.log(`  🔧 Force-fixing: ${match} -> ${fixed}`);
+      return fixed;
     });
     console.log('✅ Force-fixed remaining problematic paths');
+  } else {
+    console.log('✅ No problematic paths found - all paths are correct!');
   }
   
   writeFileSync(indexPath, html, 'utf-8');
