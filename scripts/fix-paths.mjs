@@ -45,46 +45,46 @@ try {
   scriptRegex.lastIndex = 0;
   linkRegex.lastIndex = 0;
   
-  // AGGRESSIVE FIX: Fix ALL absolute paths that don't start with /Biblioteca/
-  // This handles: src="/assets/..." -> src="/Biblioteca/assets/..."
-  // And also: src="/src/..." -> src="/Biblioteca/src/..." (though this shouldn't happen in production)
+  // AGGRESSIVE FIX: Fix ALL absolute paths that don't start with /Mapas/
+  // This handles: src="/assets/..." -> src="/Mapas/assets/..."
+  // And also: src="/src/..." -> src="/Mapas/src/..." (though this shouldn't happen in production)
   
   // First, fix all double-quoted paths
   html = html.replace(/(src|href)=["']\/([^"']+)["']/g, (match, attr, path) => {
-    // Skip if already has Biblioteca/ or if it's a full URL (http/https)
-    if (path.startsWith('Biblioteca/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
+    // Skip if already has Mapas/ or if it's a full URL (http/https)
+    if (path.startsWith('Mapas/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
       return match;
     }
-    const fixed = `${attr}="/Biblioteca/${path}"`;
+    const fixed = `${attr}="/Mapas/${path}"`;
     console.log(`  Fixing: ${match} -> ${fixed}`);
     return fixed;
   });
   
   // Fix single-quoted paths
   html = html.replace(/(src|href)=[']\/([^']+)[']/g, (match, attr, path) => {
-    if (path.startsWith('Biblioteca/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
+    if (path.startsWith('Mapas/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
       return match;
     }
-    const fixed = `${attr}='/Biblioteca/${path}'`;
+    const fixed = `${attr}='/Mapas/${path}'`;
     console.log(`  Fixing single-quoted: ${match} -> ${fixed}`);
     return fixed;
   });
   
   // Fix unquoted attributes (though rare)
   html = html.replace(/(src|href)=\/([^ >"']+)/g, (match, attr, path) => {
-    if (path.startsWith('Biblioteca/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
+    if (path.startsWith('Mapas/') || path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//')) {
       return match;
     }
-    const fixed = `${attr}=/Biblioteca/${path}`;
+    const fixed = `${attr}=/Mapas/${path}`;
     console.log(`  Fixing unquoted: ${match} -> ${fixed}`);
     return fixed;
   });
   
-  // Fix any double /Biblioteca/Biblioteca/
-  html = html.replace(/\/Biblioteca\/Biblioteca\//g, '/Biblioteca/');
+  // Fix any double /Mapas/Mapas/
+  html = html.replace(/\/Mapas\/Mapas\//g, '/Mapas/');
   
   // Final verification - check if there are still problematic paths
-  const problematicRegex = /(src|href)=["']\/(?!Biblioteca\/)(?!http)(?!\/\/)([^"']+)["']/g;
+  const problematicRegex = /(src|href)=["']\/(?!Mapas\/)(?!http)(?!\/\/)([^"']+)["']/g;
   const problematic = [];
   let probMatch;
   while ((probMatch = problematicRegex.exec(html)) !== null) {
@@ -95,8 +95,8 @@ try {
     console.log('⚠️ WARNING: Still found problematic paths:');
     problematic.forEach(p => console.log(`  - ${p}`));
     // Force fix them
-    html = html.replace(/(src|href)=["']\/(?!Biblioteca\/)(?!http)(?!\/\/)([^"']+)["']/g, (match, attr, path) => {
-      return `${attr}="/Biblioteca/${path}"`;
+    html = html.replace(/(src|href)=["']\/(?!Mapas\/)(?!http)(?!\/\/)([^"']+)["']/g, (match, attr, path) => {
+      return `${attr}="/Mapas/${path}"`;
     });
     console.log('✅ Force-fixed remaining problematic paths');
   }
