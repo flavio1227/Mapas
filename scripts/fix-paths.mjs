@@ -24,34 +24,43 @@ try {
     const files = readdirSync(assetsDir);
     console.log('📦 Files in assets:', files);
     
-    // Find main entry file
-    mainJsFile = files.find(f => 
-      (f.startsWith('main-') || f.startsWith('index-')) && f.endsWith('.js')
-    ) || files.find(f => f.endsWith('.js'));
+    // Find main entry file - try multiple patterns
+    mainJsFile = files.find(f => f.startsWith('main-') && f.endsWith('.js')) ||
+                 files.find(f => f.startsWith('index-') && f.endsWith('.js')) ||
+                 files.find(f => f.includes('main') && f.endsWith('.js')) ||
+                 files.find(f => f.endsWith('.js'));
     
     if (mainJsFile) {
       console.log(`✅ Found compiled main file: ${mainJsFile}`);
-    }
-  }
-  
-  // ULTRA SIMPLE: Replace /src/main.tsx with actual compiled file
-  if (html.includes('/src/main.tsx')) {
-    if (mainJsFile) {
-      // Replace all variations
-      html = html.replace(/src=["']\/src\/main\.tsx["']/g, `src="/Mapas/assets/${mainJsFile}"`);
-      html = html.replace(/src=[']\/src\/main\.tsx[']/g, `src='/Mapas/assets/${mainJsFile}'`);
-      html = html.replace(/src=\/src\/main\.tsx/g, `src=/Mapas/assets/${mainJsFile}`);
-      console.log(`✅ Replaced /src/main.tsx with /Mapas/assets/${mainJsFile}`);
     } else {
-      console.log('⚠️ WARNING: /src/main.tsx found but no compiled file!');
-      console.log('⚠️ This means the build failed or assets were not generated');
-      // Still try to fix it to /Mapas/src/main.tsx as fallback
-      html = html.replace(/src=["']\/src\/main\.tsx["']/g, 'src="/Mapas/src/main.tsx"');
-      html = html.replace(/src=[']\/src\/main\.tsx[']/g, "src='/Mapas/src/main.tsx'");
+      console.log('❌ No compiled JS file found!');
+    }
+  } else {
+    console.log('❌ Assets directory not found!');
+  }
+  
+  // CRITICAL FIX: Replace /src/main.tsx with actual compiled file
+  // Try ALL possible variations
+  if (html.includes('src/main.tsx') || html.includes('/src/main')) {
+    console.log('⚠️ Found /src/main.tsx in HTML - fixing...');
+    
+    if (mainJsFile) {
+      // Replace all possible variations
+      html = html.replace(/src=["']\/src\/main\.tsx["']/gi, `src="/Mapas/assets/${mainJsFile}"`);
+      html = html.replace(/src=[']\/src\/main\.tsx[']/gi, `src='/Mapas/assets/${mainJsFile}'`);
+      html = html.replace(/src=\/src\/main\.tsx/gi, `src=/Mapas/assets/${mainJsFile}`);
+      html = html.replace(/src=["']\/src\/main["']/gi, `src="/Mapas/assets/${mainJsFile}"`);
+      html = html.replace(/src=[']\/src\/main[']/gi, `src='/Mapas/assets/${mainJsFile}'`);
+      console.log(`✅ Replaced all /src/main.tsx variations with /Mapas/assets/${mainJsFile}`);
+    } else {
+      console.log('⚠️ No compiled file found, using fallback...');
+      // Fallback: at least fix the path to include /Mapas/
+      html = html.replace(/src=["']\/src\/main\.tsx["']/gi, 'src="/Mapas/src/main.tsx"');
+      html = html.replace(/src=[']\/src\/main\.tsx[']/gi, "src='/Mapas/src/main.tsx'");
     }
   }
   
-  // Fix ALL other absolute paths
+  // Fix ALL other absolute paths (but not ones that already have Mapas/)
   html = html.replace(/(src|href)=["']\/([^"']+)["']/g, (match, attr, path) => {
     if (path.startsWith('Mapas/') || path.startsWith('http') || path.startsWith('//') || path.startsWith('data:')) {
       return match;
@@ -73,7 +82,15 @@ try {
   
   console.log('\n📄 Fixed HTML:');
   console.log(html);
-  console.log('\n✅ Done!');
+  console.log('\n');
+  
+  // Final check
+  if (html.includes('/src/main')) {
+    console.log('❌ WARNING: Still contains /src/main!');
+    process.exit(1);
+  } else {
+    console.log('✅ No /src/main found - HTML is correct!');
+  }
   
 } catch (error) {
   console.error('❌ Error:', error.message);
