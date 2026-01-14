@@ -66,10 +66,10 @@ jobs:
             echo "🔧 Applying additional manual fixes..."
             cd dist
             # Fix all absolute paths
-              sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Mapas/\2"|g' index.html
-              sed -i.bak "s|\(src\|href\)='/\([^']*\)'|\1='/Mapas/\2'|g" index.html
-              # Fix double Mapas
-              sed -i.bak 's|/Mapas/Mapas/|/Mapas/|g' index.html
+            sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Mapas/\2"|g' index.html
+            sed -i.bak "s|\(src\|href\)='/\([^']*\)'|\1='/Mapas/\2'|g" index.html
+            # Fix double Mapas
+            sed -i.bak 's|/Mapas/Mapas/|/Mapas/|g' index.html
             # Remove backup
             rm -f index.html.bak
             
