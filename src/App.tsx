@@ -158,6 +158,7 @@ function App() {
                 title={currentMap.title}
                 className="w-full h-full border-0"
                 allowFullScreen
+                allow="geolocation; microphone; camera; fullscreen"
                 loading="lazy"
               />
 
@@ -229,6 +230,7 @@ function App() {
                                   src={table.url}
                                   title={table.title}
                                   className="w-full h-full border-0"
+                                  allow="geolocation; microphone; camera; fullscreen"
                                   loading="lazy"
                                 />
                                 {/* Placeholder for empty iframe */}
