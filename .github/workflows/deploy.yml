@@ -66,10 +66,10 @@ jobs:
             echo "🔧 Applying additional manual fixes..."
             cd dist
             # Fix all absolute paths
-            sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Biblioteca/\2"|g' index.html
-            sed -i.bak "s|\(src\|href\)='/\([^']*\)'|\1='/Biblioteca/\2'|g" index.html
-            # Fix double Biblioteca
-            sed -i.bak 's|/Biblioteca/Biblioteca/|/Biblioteca/|g' index.html
+              sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Mapas/\2"|g' index.html
+              sed -i.bak "s|\(src\|href\)='/\([^']*\)'|\1='/Mapas/\2'|g" index.html
+              # Fix double Mapas
+              sed -i.bak 's|/Mapas/Mapas/|/Mapas/|g' index.html
             # Remove backup
             rm -f index.html.bak
             
@@ -82,7 +82,7 @@ jobs:
             grep -oE '<link[^>]*href=["'"'"'][^"'"'"']+["'"'"'][^>]*>' index.html || echo "No link tags with href found"
             echo ""
             echo "Checking for problematic paths (should be empty):"
-            grep -oE '(src|href)=["'"'"']/[^B][^"'"'"']+["'"'"']' index.html | grep -v 'Biblioteca' | grep -v 'http' | head -5 || echo "✅ No problematic paths found!"
+            grep -oE '(src|href)=["'"'"']/[^M][^"'"'"']+["'"'"']' index.html | grep -v 'Mapas' | grep -v 'http' | head -5 || echo "✅ No problematic paths found!"
           else
             echo "❌ dist/index.html not found!"
             exit 1
