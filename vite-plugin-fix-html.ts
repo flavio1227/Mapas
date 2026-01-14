@@ -3,15 +3,36 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 export function fixHtmlPaths(): Plugin {
+  let mainJsFile: string | null = null;
+  
   return {
     name: 'fix-html-paths',
     apply: 'build',
     generateBundle(options, bundle) {
-      // This runs during the build, after all assets are generated
-      // We need to fix the HTML after all chunks are created
+      // Find the main entry file from the bundle
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type === 'chunk' && chunk.isEntry) {
+          if (fileName.includes('main') || fileName.includes('index')) {
+            mainJsFile = fileName;
+            console.log(`✅ Found main entry file in bundle: ${mainJsFile}`);
+            break;
+          }
+        }
+      }
+      
+      // Fallback: find any entry chunk
+      if (!mainJsFile) {
+        for (const [fileName, chunk] of Object.entries(bundle)) {
+          if (chunk.type === 'chunk' && chunk.isEntry) {
+            mainJsFile = fileName;
+            console.log(`✅ Found entry file in bundle: ${mainJsFile}`);
+            break;
+          }
+        }
+      }
     },
     writeBundle() {
-      // This runs after all files are written
+      // This runs after all files are written - use this to fix the HTML
       const distPath = join(process.cwd(), 'dist');
       const indexPath = join(distPath, 'index.html');
       
@@ -23,26 +44,35 @@ export function fixHtmlPaths(): Plugin {
       try {
         let html = readFileSync(indexPath, 'utf-8');
         
-        // Find the actual compiled main file
-        const assetsDir = join(distPath, 'assets');
-        let mainJsFile = null;
-        
-        if (existsSync(assetsDir)) {
-          const files = readdirSync(assetsDir);
-          mainJsFile = files.find((f: string) => 
-            (f.startsWith('main-') || f.startsWith('index-')) && f.endsWith('.js')
-          ) || files.find((f: string) => f.endsWith('.js'));
+        // If we didn't find it in generateBundle, try to find it now
+        if (!mainJsFile) {
+          const assetsDir = join(distPath, 'assets');
+          if (existsSync(assetsDir)) {
+            const files = readdirSync(assetsDir);
+            mainJsFile = files.find((f: string) => 
+              (f.startsWith('main-') || f.startsWith('index-')) && f.endsWith('.js')
+            ) || files.find((f: string) => f.endsWith('.js')) || null;
+          }
         }
         
         // CRITICAL: Replace /src/main.tsx with the actual compiled file
         if (mainJsFile) {
-          // Replace all variations
-          html = html.replace(/src=["']\/src\/main\.tsx["']/gi, `src="/Mapas/assets/${mainJsFile}"`);
-          html = html.replace(/src=[']\/src\/main\.tsx[']/gi, `src='/Mapas/assets/${mainJsFile}'`);
-          html = html.replace(/src=\/src\/main\.tsx/gi, `src=/Mapas/assets/${mainJsFile}`);
-          html = html.replace(/src=["']\/src\/main["']/gi, `src="/Mapas/assets/${mainJsFile}"`);
-          html = html.replace(/src=[']\/src\/main[']/gi, `src='/Mapas/assets/${mainJsFile}'`);
-          console.log(`✅ Replaced /src/main.tsx with /Mapas/assets/${mainJsFile}`);
+          // Ensure mainJsFile has the correct path (it might already include 'assets/')
+          const mainPath = mainJsFile.startsWith('assets/') 
+            ? `/Mapas/${mainJsFile}` 
+            : `/Mapas/assets/${mainJsFile}`;
+          
+          // Replace all variations - be VERY aggressive
+          html = html.replace(/src=["']\/src\/main\.tsx["']/gi, `src="${mainPath}"`);
+          html = html.replace(/src=[']\/src\/main\.tsx[']/gi, `src='${mainPath}'`);
+          html = html.replace(/src=\/src\/main\.tsx/gi, `src=${mainPath}`);
+          html = html.replace(/src=["']\/src\/main["']/gi, `src="${mainPath}"`);
+          html = html.replace(/src=[']\/src\/main[']/gi, `src='${mainPath}'`);
+          html = html.replace(/src=["']\/src\/main\.tsx/gi, `src="${mainPath}"`);
+          html = html.replace(/src=[']\/src\/main\.tsx/gi, `src='${mainPath}'`);
+          html = html.replace(/src=\/src\/main/gi, `src=${mainPath}`);
+          
+          console.log(`✅ Replaced /src/main.tsx with ${mainPath}`);
         } else {
           console.warn('⚠️ No compiled main file found!');
         }
@@ -72,10 +102,13 @@ export function fixHtmlPaths(): Plugin {
         const finalHtml = readFileSync(indexPath, 'utf-8');
         if (finalHtml.includes('/src/main')) {
           console.error('❌ ERROR: HTML still contains /src/main after fix!');
-          console.error('HTML content:', finalHtml);
+          console.error('HTML content:', finalHtml.substring(0, 500));
+        } else {
+          console.log('✅ Verified: No /src/main found in final HTML');
         }
       } catch (error: any) {
         console.error('❌ Error fixing HTML paths:', error.message);
+        console.error(error.stack);
       }
     }
   };
