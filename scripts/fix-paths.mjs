@@ -1,8 +1,14 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 
-const distPath = join(process.cwd(), 'dist');
+// Ensure we're in the right directory
+const cwd = process.cwd();
+console.log('📂 Current working directory:', cwd);
+
+const distPath = join(cwd, 'dist');
 const indexPath = join(distPath, 'index.html');
+
+console.log('📂 Looking for index.html at:', indexPath);
 
 if (!existsSync(indexPath)) {
   console.error('❌ index.html not found at:', indexPath);
@@ -40,23 +46,39 @@ try {
   }
   
   // CRITICAL FIX: Replace /src/main.tsx with actual compiled file
-  // Try ALL possible variations
-  if (html.includes('src/main.tsx') || html.includes('/src/main')) {
+  // Try ALL possible variations - be EXTREMELY aggressive
+  const hasSrcMain = html.includes('src/main.tsx') || html.includes('/src/main') || html.includes('src="/src/') || html.includes("src='/src/");
+  
+  if (hasSrcMain) {
     console.log('⚠️ Found /src/main.tsx in HTML - fixing...');
+    console.log('🔍 HTML contains src/main:', html.includes('src/main.tsx'));
+    console.log('🔍 HTML contains /src/main:', html.includes('/src/main'));
     
     if (mainJsFile) {
-      // Replace all possible variations
+      console.log(`🔧 Replacing with: /Mapas/assets/${mainJsFile}`);
+      // Replace ALL possible variations - be very aggressive
       html = html.replace(/src=["']\/src\/main\.tsx["']/gi, `src="/Mapas/assets/${mainJsFile}"`);
       html = html.replace(/src=[']\/src\/main\.tsx[']/gi, `src='/Mapas/assets/${mainJsFile}'`);
       html = html.replace(/src=\/src\/main\.tsx/gi, `src=/Mapas/assets/${mainJsFile}`);
       html = html.replace(/src=["']\/src\/main["']/gi, `src="/Mapas/assets/${mainJsFile}"`);
       html = html.replace(/src=[']\/src\/main[']/gi, `src='/Mapas/assets/${mainJsFile}'`);
+      html = html.replace(/src=["']\/src\/main\.tsx/gi, `src="/Mapas/assets/${mainJsFile}"`);
+      html = html.replace(/src=[']\/src\/main\.tsx/gi, `src='/Mapas/assets/${mainJsFile}'`);
+      // Also try without quotes
+      html = html.replace(/src=\/src\/main/gi, `src=/Mapas/assets/${mainJsFile}`);
       console.log(`✅ Replaced all /src/main.tsx variations with /Mapas/assets/${mainJsFile}`);
     } else {
-      console.log('⚠️ No compiled file found, using fallback...');
+      console.log('⚠️ No compiled file found! Listing all files in dist:');
+      try {
+        const allFiles = readdirSync(distPath, { recursive: true });
+        console.log('All files:', allFiles);
+      } catch (e) {
+        console.log('Could not list files:', e.message);
+      }
       // Fallback: at least fix the path to include /Mapas/
       html = html.replace(/src=["']\/src\/main\.tsx["']/gi, 'src="/Mapas/src/main.tsx"');
       html = html.replace(/src=[']\/src\/main\.tsx[']/gi, "src='/Mapas/src/main.tsx'");
+      html = html.replace(/src=\/src\/main\.tsx/gi, 'src=/Mapas/src/main.tsx');
     }
   }
   

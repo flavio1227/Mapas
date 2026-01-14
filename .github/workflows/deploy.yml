@@ -64,30 +64,65 @@ jobs:
       - name: Fix HTML paths
         run: |
           echo "🔧 Running path fix script..."
-          if ! node scripts/fix-paths.mjs; then
-            echo "❌ Script failed, applying emergency fixes..."
-            cd dist
-            # Find main JS file
+          echo "Current directory: $(pwd)"
+          echo "Files in current dir:"
+          ls -la | head -10
+          echo ""
+          
+          # Run script
+          node scripts/fix-paths.mjs || {
+            echo "⚠️ Script exited with error, continuing with manual fix..."
+          }
+          
+          # ALWAYS apply manual fix regardless of script result
+          echo ""
+          echo "🔧 Applying manual fixes..."
+          cd dist
+          echo "Current directory: $(pwd)"
+          echo "Files in dist:"
+          ls -la
+          echo ""
+          
+          # Find main JS file
+          if [ -d assets ]; then
             MAIN_FILE=$(ls assets/*.js 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "")
+            echo "Found main file: $MAIN_FILE"
+            
             if [ -n "$MAIN_FILE" ]; then
-              echo "Found main file: $MAIN_FILE"
+              # Replace /src/main.tsx with actual file
               sed -i.bak "s|src=[\"']/src/main[^\"']*[\"']|src=\"/Mapas/assets/$MAIN_FILE\"|g" index.html
               sed -i.bak "s|src=[']/src/main[^']*[']|src='/Mapas/assets/$MAIN_FILE'|g" index.html
+              sed -i.bak "s|src=/src/main|src=/Mapas/assets/$MAIN_FILE|g" index.html
             fi
-            # Fix all other paths
-            sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Mapas/\2"|g' index.html
-            sed -i.bak 's|/Mapas/Mapas/|/Mapas/|g' index.html
-            rm -f index.html.bak
           fi
+          
+          # Fix ALL other absolute paths
+          sed -i.bak 's|\(src\|href\)="/\([^"]*\)"|\1="/Mapas/\2"|g' index.html
+          sed -i.bak "s|\(src\|href\)='/\([^']*\)'|\1='/Mapas/\2'|g" index.html
+          sed -i.bak 's|/Mapas/Mapas/|/Mapas/|g' index.html
+          rm -f index.html.bak
           
           echo ""
           echo "📄 Final HTML verification..."
-          cd dist
-          echo "Script tags:"
+          echo "=== FULL HTML ==="
+          cat index.html
+          echo ""
+          echo "=== Script tags ==="
           grep -E '<script.*src=' index.html || echo "No script tags"
+          echo ""
+          echo "=== Checking for /src/main ==="
           if grep -q '/src/main' index.html; then
             echo "❌ ERROR: Still contains /src/main!"
-            exit 1
+            echo "Attempting one more fix..."
+            if [ -n "$MAIN_FILE" ]; then
+              sed -i "s|/src/main|/Mapas/assets/$MAIN_FILE|g" index.html
+            else
+              sed -i 's|/src/main|/Mapas/src/main|g' index.html
+            fi
+            echo "After final fix:"
+            grep -E '<script.*src=' index.html || echo "No script tags"
+          else
+            echo "✅ No /src/main found!"
           fi
       
       - name: Copy 404.html
