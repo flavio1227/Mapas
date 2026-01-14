@@ -69,11 +69,23 @@ jobs:
           echo ""
           echo "📄 Verifying fixed HTML..."
           cd dist
-          echo "Script tags:"
+          echo "=== FULL HTML CONTENT ==="
+          cat index.html
+          echo ""
+          echo "=== Script tags found ==="
           grep -E '<script.*src=' index.html || echo "No script tags"
           echo ""
-          echo "Checking for /src/main.tsx (should be empty):"
-          grep -E '/src/main' index.html || echo "✅ No /src/main.tsx found!"
+          echo "=== Checking for /src/main.tsx ==="
+          if grep -q '/src/main' index.html; then
+            echo "❌ STILL FOUND /src/main.tsx!"
+            echo "Attempting emergency fix..."
+            sed -i 's|src="/src/main.tsx"|src="/Mapas/assets/main-'$(ls assets/*.js 2>/dev/null | head -1 | sed 's|assets/||' | sed 's|.*/||')'"|g' index.html || echo "Emergency fix failed"
+            sed -i 's|src="/src/main|src="/Mapas/src/main|g' index.html
+            echo "After emergency fix:"
+            grep -E '<script.*src=' index.html || echo "No script tags"
+          else
+            echo "✅ No /src/main.tsx found!"
+          fi
       
       - name: Copy 404.html
         run: cp public/404.html dist/404.html || echo "404.html not found, skipping"

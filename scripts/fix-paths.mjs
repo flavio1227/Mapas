@@ -35,10 +35,20 @@ try {
   }
   
   // ULTRA SIMPLE: Replace /src/main.tsx with actual compiled file
-  if (mainJsFile && html.includes('/src/main.tsx')) {
-    html = html.replace(/src=["']\/src\/main\.tsx["']/g, `src="/Mapas/assets/${mainJsFile}"`);
-    html = html.replace(/src=["']\/src\/main\.tsx["']/g, `src='/Mapas/assets/${mainJsFile}'`);
-    console.log(`✅ Replaced /src/main.tsx with /Mapas/assets/${mainJsFile}`);
+  if (html.includes('/src/main.tsx')) {
+    if (mainJsFile) {
+      // Replace all variations
+      html = html.replace(/src=["']\/src\/main\.tsx["']/g, `src="/Mapas/assets/${mainJsFile}"`);
+      html = html.replace(/src=[']\/src\/main\.tsx[']/g, `src='/Mapas/assets/${mainJsFile}'`);
+      html = html.replace(/src=\/src\/main\.tsx/g, `src=/Mapas/assets/${mainJsFile}`);
+      console.log(`✅ Replaced /src/main.tsx with /Mapas/assets/${mainJsFile}`);
+    } else {
+      console.log('⚠️ WARNING: /src/main.tsx found but no compiled file!');
+      console.log('⚠️ This means the build failed or assets were not generated');
+      // Still try to fix it to /Mapas/src/main.tsx as fallback
+      html = html.replace(/src=["']\/src\/main\.tsx["']/g, 'src="/Mapas/src/main.tsx"');
+      html = html.replace(/src=[']\/src\/main\.tsx[']/g, "src='/Mapas/src/main.tsx'");
+    }
   }
   
   // Fix ALL other absolute paths
