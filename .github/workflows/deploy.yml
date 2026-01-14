@@ -39,6 +39,13 @@ jobs:
             exit 1
           }
           echo "✅ Build completed"
+          echo ""
+          echo "📦 Verifying build output..."
+          ls -la dist/ || echo "dist directory not found"
+          if [ -d dist/assets ]; then
+            echo "📁 Assets directory contents:"
+            ls -la dist/assets/ | head -10
+          fi
         env:
           NODE_ENV: production
       

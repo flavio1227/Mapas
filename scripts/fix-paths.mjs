@@ -39,6 +39,11 @@ try {
   const hasSrcMain = scriptPaths.some(p => p.includes('/src/main'));
   if (hasSrcMain) {
     console.log('⚠️ WARNING: Found /src/main.tsx path - this should be compiled by Vite!');
+    console.log('🔧 This is a critical error - the build may have failed or HTML was not transformed correctly');
+    console.log('🔧 Attempting to find compiled assets...');
+    const distFiles = require('fs').readdirSync(distPath);
+    const assetFiles = distFiles.filter(f => f.includes('main') || f.includes('assets'));
+    console.log('📦 Found files in dist:', assetFiles);
   }
   
   // Reset regex
@@ -61,6 +66,35 @@ try {
         path.startsWith('data:')) {
       return match;
     }
+    
+    // Special handling for /src/main.tsx - this should NEVER be in production
+    if (path.startsWith('src/main')) {
+      console.log(`  ⚠️ CRITICAL: Found /src/main.tsx - this indicates build failure!`);
+      console.log(`  🔧 Attempting to find actual compiled file...`);
+      // Try to find the actual compiled file
+      const fs = require('fs');
+      try {
+        const assetsDir = require('path').join(distPath, 'assets');
+        if (require('fs').existsSync(assetsDir)) {
+          const files = require('fs').readdirSync(assetsDir);
+          const mainFile = files.find(f => f.includes('main') && f.endsWith('.js'));
+          if (mainFile) {
+            const fixed = `${attr}="/Mapas/assets/${mainFile}"`;
+            console.log(`  ✓ Fixed /src/main.tsx to: ${fixed}`);
+            replacementCount++;
+            return fixed;
+          }
+        }
+      } catch (e) {
+        console.log(`  ⚠️ Could not find compiled file: ${e.message}`);
+      }
+      // Fallback: still fix it to /Mapas/src/main.tsx (won't work but at least consistent)
+      const fixed = `${attr}="/Mapas/${path}"`;
+      console.log(`  ⚠️ Fallback fix: ${match} -> ${fixed}`);
+      replacementCount++;
+      return fixed;
+    }
+    
     const fixed = `${attr}="/Mapas/${path}"`;
     console.log(`  ✓ Fixing: ${match} -> ${fixed}`);
     replacementCount++;
